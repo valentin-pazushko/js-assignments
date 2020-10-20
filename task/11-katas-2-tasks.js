@@ -1,4 +1,3 @@
-'use strict';
 
 /**
  * Returns the bank account number parsed from specified string.
@@ -34,7 +33,37 @@
  *
  */
 function parseBankAccount(bankAccount) {
-    throw new Error('Not implemented');
+    const numAssocArray = Array(10);
+    for (let i = 0; i < numAssocArray.length; i++) {
+        numAssocArray[i] = Array(3);
+    }
+    const tpl1 = ' _     _  _     _  _  _  _  _ ';
+    const tpl2 = '| |  | _| _||_||_ |_   ||_||_|';
+    const tpl3 = '|_|  ||_  _|  | _||_|  ||_| _|';
+    for (let i = 0; i < numAssocArray.length; i++) {
+        numAssocArray[i][0] = tpl1.substr(i * 3, 3);
+        numAssocArray[i][1] = tpl2.substr(i * 3, 3);
+        numAssocArray[i][2] = tpl3.substr(i * 3, 3);
+    }
+
+    const lines = bankAccount.split('\n');
+    const strNumStorage = Array(3);
+    let num = 0;
+    let index;
+    for (let i = 0; i < lines[0].length; i += 3) {
+        for (let j = 0; j < strNumStorage.length; j++) {
+            strNumStorage[j] = lines[j].substr(i, 3);
+        }
+        for (let j = 0; j < numAssocArray.length; j++) {
+            if ((strNumStorage[0] === numAssocArray[j][0])
+                && (strNumStorage[1] === numAssocArray[j][1])
+                && (strNumStorage[2] === numAssocArray[j][2])) {
+                index = j;
+            }
+        }
+        num = num * 10 + index;
+    }
+    return num;
 }
 
 
@@ -63,7 +92,15 @@ function parseBankAccount(bankAccount) {
  *                                                                                                'characters.'
  */
 function* wrapText(text, columns) {
-    throw new Error('Not implemented');
+    const words = text.split(' ');
+    let line;
+    while (words.length > 0) {
+        line = words.shift();
+        while ((words.length > 0) && (line.length + words[0].length < columns)) {
+            line += ` ${words.shift()}`;
+        }
+        yield line;
+    }
 }
 
 
@@ -96,11 +133,169 @@ const PokerRank = {
     ThreeOfKind: 3,
     TwoPairs: 2,
     OnePair: 1,
-    HighCard: 0
+    HighCard: 0,
+};
+
+/**
+ * @return {boolean}
+ */
+function IsStraight(cards) {
+    let values = Array();
+    for (const card of cards) {
+        switch (card.name) {
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+            case '10':
+                values.push(Number.parseInt(card.name));
+                break;
+            case 'J':
+                values.push(11);
+                break;
+            case 'Q':
+                values.push(12);
+                break;
+            case 'K':
+                values.push(13);
+                break;
+        }
+    }
+    values = values.sort((a, b) => a > b);
+    let areInStraightOrder = true;
+    for (let i = 1; i < values.length; i++) {
+        if (values[i] - values[i - 1] !== 1) {
+            areInStraightOrder = false;
+        }
+    }
+    if (!areInStraightOrder) {
+        return false;
+    }
+    if (values.length === 5) {
+        return true;
+    }
+    if ((values[0] === 2) || (values[values.length - 1] === 13)) {
+        return true;
+    }
+}
+
+/**
+ * @return {boolean}
+ */
+function IsFlush(cards) {
+    for (let i = 1; i < cards.length; i++) {
+        if (cards[0].suit !== cards[i].suit) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * @return {boolean}
+ */
+function IsStraightFlush(cards) {
+    return IsFlush(cards) && IsStraight(cards);
+}
+
+/**
+ * @return {boolean}
+ */
+function IsFullHouse(cards) {
+    let counter = 0;
+    let remainingCards;
+    for (let i = 0; (i < cards.length - 2) && (counter !== 3); i++) {
+        counter = 1;
+        for (let j = i + 1; j < cards.length; j++) {
+            if (cards[i].name === cards[j].name) {
+                counter++;
+            }
+        }
+        if (counter === 3) {
+            remainingCards = cards.filter((card) => card.name !== cards[i].name);
+        }
+    }
+    return (counter === 3) && (remainingCards[0].name === remainingCards[1].name);
+}
+
+function ParseCard(card) {
+    const matched = card.match(/([JQKA\d]+)(.+)/);
+    const result = [];
+    result.name = matched[1];
+    result.suit = matched[2];
+    return result;
+}
+
+/**
+ * @return {number}
+ */
+function GetMaxOfKind(cards) {
+    const oneOfKindArray = [];
+    let maxOfKind = 0;
+    for (const card of cards) {
+        if (oneOfKindArray[card.name] === undefined) {
+            oneOfKindArray[card.name] = 1;
+        } else {
+            oneOfKindArray[card.name]++;
+        }
+        maxOfKind = Math.max(maxOfKind, oneOfKindArray[card.name]);
+    }
+    return maxOfKind;
+}
+
+/**
+ * @return {number}
+ */
+function GetPairsCount(cards) {
+    const nameCountArray = Array();
+    let numOfPairs = 0;
+    for (const card of cards) {
+        if (nameCountArray[card.name] === undefined) {
+            nameCountArray[card.name] = 1;
+        } else if (++nameCountArray[card.name] === 2) {
+            numOfPairs++;
+        }
+    }
+    return numOfPairs;
 }
 
 function getPokerHandRank(hand) {
-    throw new Error('Not implemented');
+    const cards = new Array(hand.length);
+    for (let i = 0; i < hand.length; i++) {
+        cards[i] = ParseCard(hand[i]);
+    }
+    const maxOfKind = GetMaxOfKind(cards);
+    const pairs = GetPairsCount(cards);
+    if (IsStraightFlush(cards)) {
+        return PokerRank.StraightFlush;
+    }
+    if (maxOfKind === 4) {
+        return PokerRank.FourOfKind;
+    }
+    if (IsFullHouse(cards)) {
+        return PokerRank.FullHouse;
+    }
+    if (IsFlush(cards)) {
+        return PokerRank.Flush;
+    }
+    if (IsStraight(cards)) {
+        return PokerRank.Straight;
+    }
+    if (maxOfKind === 3) {
+        return PokerRank.ThreeOfKind;
+    }
+    if (pairs === 2) {
+        return PokerRank.TwoPairs;
+    }
+    if (pairs === 1) {
+        return PokerRank.OnePair;
+    }
+    return PokerRank.HighCard;
 }
 
 
@@ -110,10 +305,10 @@ function getPokerHandRank(hand) {
  * The task is to break the figure in the rectangles it is made of.
  *
  * NOTE: The order of rectanles does not matter.
- * 
+ *
  * @param {string} figure
  * @return {Iterable.<string>} decomposition to basic parts
- * 
+ *
  * @example
  *
  *    '+------------+\n'+
@@ -135,14 +330,63 @@ function getPokerHandRank(hand) {
  *    '+-------------+\n'
  */
 function* getFigureRectangles(figure) {
-   throw new Error('Not implemented');
+    const figureArr = figure.split('\n');
+    let rectangle;
+    for (let i = 0; i < figureArr.length; i++) {
+        for (let j = 0; j < figureArr[i].length; j++) {
+            if (figureArr[i][j] === '+') {
+                rectangle = GetRectangle(figureArr, i, j);
+                if (rectangle !== null) {
+                    yield DrawRectangle(rectangle[1], rectangle[0]);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @return {null}
+ */
+function GetRectangle(figure, row, column) {
+    for (let i = row + 1; i < figure.length; i++) {
+        if (figure[i][column] === '+') {
+            for (let j = column + 1; j < figure[row].length; j++) {
+                if (figure[i][j] === '+') {
+                    if (figure[row][j] === '+') {
+                        let flag = true;
+                        for (let k = row + 1; k < i; k++) {
+                            if (figure[k][j] !== '|') {
+                                flag = false;
+                                break;
+                            }
+                        }
+                        if (flag) {
+                            return [i - row + 1, j - column + 1];
+                        }
+                    }
+                } else if (figure[i][j] !== '-') {
+                    break;
+                }
+            }
+        } else if (figure[i][column] !== '|') {
+            break;
+        }
+    }
+    return null;
+}
+
+/**
+ * @return {string}
+ */
+function DrawRectangle(width, height) {
+    return (`+${'-'.repeat(width - 2)}+\n${(`|${' '.repeat(width - 2)}|\n`).repeat(height - 2)}+${'-'.repeat(width - 2)}+\n`);
 }
 
 
 module.exports = {
-    parseBankAccount : parseBankAccount,
-    wrapText: wrapText,
-    PokerRank: PokerRank,
-    getPokerHandRank: getPokerHandRank,
-    getFigureRectangles: getFigureRectangles
+    parseBankAccount,
+    wrapText,
+    PokerRank,
+    getPokerHandRank,
+    getFigureRectangles,
 };

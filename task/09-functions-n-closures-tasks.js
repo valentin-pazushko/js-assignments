@@ -167,7 +167,28 @@ function retry(func, attempts) {
  *
  */
 function logger(func, logFunc) {
-    throw new Error('Not implemented');
+    return (...args)=>{
+        let str = '';
+        for (let index = 0; index < args.length; index++) {
+            if (args[index] instanceof Array) {
+                str += '[';
+                for (let i = 0; i < args[index].length; i++)
+                    if ((typeof (args[index][i])).toLowerCase() == "string")
+                        str += "\"" + args[index][i] + "\",";
+                    else
+                        str += args[index][i] + ",";
+                str = str.slice(0, str.length - 1);
+                str += '],';
+            }
+            else
+                str += args[index] + ',';
+        }
+        str = str.slice(0, str.length - 1);
+        logFunc(`${func.name}(${str}) starts`);
+        let res = func.apply(this, args);
+        logFunc(`${func.name}(${str}) ends`);
+        return res;
+    }
 }
 
 
@@ -184,8 +205,10 @@ function logger(func, logFunc) {
  *   partialUsingArguments(fn, 'a','b','c')('d') => 'abcd'
  *   partialUsingArguments(fn, 'a','b','c','d')() => 'abcd'
  */
-function partialUsingArguments(fn) {
-    throw new Error('Not implemented');
+function partialUsingArguments(fn, ...args0) {
+    return (...args1)=>{
+        return fn(...args0,...args1);
+    }
 }
 
 
